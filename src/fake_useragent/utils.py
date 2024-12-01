@@ -10,6 +10,8 @@ if sys.version_info >= (3, 10):
 else:
     import importlib_resources as ilr
 
+from pathlib import Path
+
 from fake_useragent.errors import FakeUserAgentError
 from fake_useragent.log import logger
 
@@ -33,53 +35,56 @@ class BrowserUserAgentData(TypedDict):
     """OS name for the user agent."""
 
 
-def load() -> list[BrowserUserAgentData]:
-    """Load the included `browser.json` file into memory..
-
-    Raises:
-        FakeUserAgentError: If unable to find the data.
+def find_browser_json_path() -> Path:
+    """Find the path to the browsers.json file.
 
     Returns:
-        list[BrowserUserAgentData]: The list of browser user agent data, following the
-            `BrowserUserAgentData` schema.
+        Path: Path to the browsers.json file.
+
+    Raises:
+        FakeUserAgentError: If unable to find the file.
     """
-    data = []
-    ret: Union[list[BrowserUserAgentData], None] = None
     try:
-        json_lines = (
-            ilr.files("fake_useragent.data").joinpath("browsers.json").read_text()
-        )
-        for line in json_lines.splitlines():
-            data.append(json.loads(line))
-        ret = data
+        file_path = ilr.files("fake_useragent.data").joinpath("browsers.json")
+        return Path(str(file_path))
     except Exception as exc:
-        # Empty data just to be sure
-        data = []
         logger.warning(
-            "Unable to find local data/json file or could not parse the contents using importlib-resources. Try pkg-resource next.",
+            "Unable to find local data/json file using importlib-resources. Try pkg-resource.",
             exc_info=exc,
         )
         try:
             from pkg_resources import resource_filename
 
-            with open(
-                resource_filename("fake_useragent", "data/browsers.json")
-            ) as file:
-                json_lines = file.read()
-                for line in json_lines.splitlines():
-                    data.append(json.loads(line))
-            ret = data
+            return Path(resource_filename("fake_useragent", "data/browsers.json"))
         except Exception as exc2:
-            # Empty data just to be sure
-            data = []
             logger.warning(
-                "Could not find local data/json file or could not parse the contents using pkg-resource.",
+                "Could not find local data/json file using pkg-resource.",
                 exc_info=exc2,
             )
+            raise FakeUserAgentError("Could not locate browsers.json file") from exc2
 
-    if not ret:
-        raise FakeUserAgentError("Data list is empty", ret)
 
-    if not isinstance(ret, list):
-        raise FakeUserAgentError("Data is not a list ", ret)
-    return ret
+def load() -> list[BrowserUserAgentData]:
+    """Load the included `browser.json` file into memory.
+
+    Raises:
+        FakeUserAgentError: If unable to load or parse the data.
+
+    Returns:
+        list[BrowserUserAgentData]: The list of browser user agent data.
+    """
+    data = []
+    try:
+        json_path = find_browser_json_path()
+        json_lines = json_path.read_text()
+        for line in json_lines.splitlines():
+            data.append(json.loads(line))
+    except Exception as exc:
+        raise FakeUserAgentError("Failed to load or parse browsers.json") from exc
+
+    if not data:
+        raise FakeUserAgentError("Data list is empty", data)
+
+    if not isinstance(data, list):
+        raise FakeUserAgentError("Data is not a list", data)
+    return data
