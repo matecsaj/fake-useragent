@@ -2,7 +2,7 @@
 
 import json
 import sys
-from typing import TypedDict, Union
+from typing import TypedDict, Optional
 
 # We need files() from Python 3.10 or higher
 if sys.version_info >= (3, 10):
@@ -25,14 +25,20 @@ class BrowserUserAgentData(TypedDict):
     """Sampling probability for this user agent when random sampling. Currently has no effect."""
     type: str
     """The device type for this user agent."""
-    system: str
-    """System name for the user agent."""
-    browser: str
+    device_brand: Optional[str]
+    """The device brand for this user agent."""
+    browser: Optional[str]
     """Browser name for the user agent."""
+    browser_version: Optional[str]
+    """The full version of the browser (like 1.2.3.4)."""
     version: float
     """Version of the browser."""
-    os: str
+    os: Optional[str]
     """OS name for the user agent."""
+    os_version: Optional[str]
+    """The full version of the OS (like 1.2.3.4)."""
+    system: str
+    """System name for the user agent."""
 
 
 def find_browser_json_path() -> Path:

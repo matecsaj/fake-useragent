@@ -5,11 +5,24 @@ import json
 from ua_parser import parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import argparse
-from fake_useragent.utils import find_browser_json_path
+from fake_useragent.utils import find_browser_json_path, BrowserUserAgentData
 from pathlib import Path
+from typing import TypedDict
+
+class SourceItem(TypedDict):
+    """The schema for the source item that the source file must (at least) follow."""
+
+    userAgent: str
+    """The user agent string."""
+    weight: float
+    """Sampling probability for this user agent when random sampling. Currently has no effect."""
+    deviceCategory: str
+    """The device type for this user agent."""
+    platform: str
+    """System name for the user agent."""
 
 
-def process_item(item):
+def process_item(item: SourceItem) -> Optional[BrowserUserAgentData]:
     """Process a single item and return the transformed item."""
     # Parse the user agent string
     ua_result = parse(item["userAgent"])
@@ -64,10 +77,10 @@ def process_item(item):
         "device_brand": ua_result.device.brand if ua_result.device else None,
         "browser": ua_result.user_agent.family if ua_result.user_agent else None,
         "browser_version": browser_version,
-        "browser_version_major_minor": browser_version_major_minor,
+        "version": browser_version_major_minor,
         "os": ua_result.os.family if ua_result.os else None,
         "os_version": os_version,
-        "platform": item["platform"],
+        "system": item["platform"],
     }
 
 
